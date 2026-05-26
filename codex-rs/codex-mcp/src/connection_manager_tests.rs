@@ -18,6 +18,7 @@ use crate::tools::normalize_tools_for_model_with_prefix;
 use crate::tools::tool_with_model_visible_input_schema;
 use codex_config::Constrained;
 use codex_config::McpServerConfig;
+use codex_config::types::AuthKeyringBackendKind;
 use codex_exec_server::EnvironmentManager;
 use codex_protocol::ToolName;
 use codex_protocol::models::PermissionProfile;
@@ -1019,6 +1020,7 @@ async fn no_local_runtime_fails_local_stdio_but_keeps_local_http_server() {
     let (manager, cancel_token) = McpConnectionManager::new(
         &mcp_servers,
         OAuthCredentialsStoreMode::default(),
+        AuthKeyringBackendKind::default(),
         HashMap::new(),
         &approval_policy,
         String::new(),

@@ -17,6 +17,7 @@ use std::time::Duration;
 use std::time::Instant;
 
 use anyhow::Context as _;
+use codex_config::types::AuthKeyringBackendKind;
 use codex_config::types::OAuthCredentialsStoreMode;
 use codex_exec_server::Environment;
 use codex_exec_server::ExecServerClient;
@@ -97,6 +98,7 @@ pub(crate) async fn create_client(base_url: &str) -> anyhow::Result<RmcpClient> 
         /*http_headers*/ None,
         /*env_http_headers*/ None,
         OAuthCredentialsStoreMode::File,
+        AuthKeyringBackendKind::default(),
         Environment::default_for_tests().get_http_client(),
         /*auth_provider*/ None,
     )
@@ -135,6 +137,7 @@ pub(crate) async fn create_remote_client(
         /*http_headers*/ None,
         /*env_http_headers*/ None,
         OAuthCredentialsStoreMode::File,
+        AuthKeyringBackendKind::default(),
         Arc::new(http_client),
         /*auth_provider*/ None,
     )
