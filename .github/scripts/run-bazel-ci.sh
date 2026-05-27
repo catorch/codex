@@ -5,6 +5,7 @@ set -euo pipefail
 print_failed_bazel_test_logs=0
 print_failed_bazel_action_summary=0
 remote_download_toplevel=0
+use_node_test_env=0
 windows_msvc_host_platform=0
 windows_cross_compile=0
 
@@ -20,6 +21,10 @@ while [[ $# -gt 0 ]]; do
       ;;
     --remote-download-toplevel)
       remote_download_toplevel=1
+      shift
+      ;;
+    --use-node-test-env)
+      use_node_test_env=1
       shift
       ;;
     --windows-msvc-host-platform)
@@ -42,7 +47,7 @@ while [[ $# -gt 0 ]]; do
 done
 
 if [[ $# -eq 0 ]]; then
-  echo "Usage: $0 [--print-failed-test-logs] [--print-failed-action-summary] [--remote-download-toplevel] [--windows-msvc-host-platform] [--windows-cross-compile] -- <bazel args> -- <targets>" >&2
+  echo "Usage: $0 [--print-failed-test-logs] [--print-failed-action-summary] [--use-node-test-env] [--remote-download-toplevel] [--windows-msvc-host-platform] [--windows-cross-compile] -- <bazel args> -- <targets>" >&2
   exit 1
 fi
 
@@ -321,6 +326,16 @@ if [[ -n "${CODEX_BAZEL_EXECUTION_LOG_COMPACT_DIR:-}" ]]; then
   post_config_bazel_args+=(
     "--execution_log_compact_file=${CODEX_BAZEL_EXECUTION_LOG_COMPACT_DIR}/execution-log-${bazel_args[0]}-${GITHUB_JOB:-local}-$$.zst"
   )
+fi
+
+if [[ $use_node_test_env -eq 1 ]]; then
+  # Bazel test sandboxes on macOS may resolve an older Homebrew `node`
+  # before the `actions/setup-node` runtime on PATH.
+  node_bin="$(which node)"
+  if [[ "${RUNNER_OS:-}" == "Windows" ]]; then
+    node_bin="$(cygpath -w "${node_bin}")"
+  fi
+  post_config_bazel_args+=("--test_env=CODEX_JS_REPL_NODE_PATH=${node_bin}")
 fi
 
 if [[ "${RUNNER_OS:-}" == "Windows" ]]; then

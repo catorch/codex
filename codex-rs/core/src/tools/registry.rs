@@ -360,6 +360,14 @@ impl ToolRegistry {
         self.tools.get(name).map(Arc::clone)
     }
 
+    pub(crate) fn specs(&self) -> Vec<ToolSpec> {
+        self.tools.values().map(|tool| tool.spec()).collect()
+    }
+
+    pub(crate) fn find_spec(&self, name: &ToolName) -> Option<ToolSpec> {
+        self.tool(name).map(|tool| tool.spec())
+    }
+
     #[cfg(test)]
     pub(crate) fn tool_names_for_test(&self) -> Vec<ToolName> {
         let mut names = self.tools.keys().cloned().collect::<Vec<_>>();

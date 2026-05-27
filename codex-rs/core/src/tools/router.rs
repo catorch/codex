@@ -9,6 +9,7 @@ use crate::tools::registry::AnyToolResult;
 use crate::tools::registry::ToolArgumentDiffConsumer;
 use crate::tools::registry::ToolRegistry;
 use crate::tools::spec_plan::build_tool_router;
+use codex_features::Feature;
 use codex_mcp::ToolInfo;
 use codex_protocol::dynamic_tools::DynamicToolSpec;
 use codex_protocol::models::ResponseItem;
@@ -75,6 +76,14 @@ impl ToolRouter {
 
     pub fn model_visible_specs(&self) -> Vec<ToolSpec> {
         self.model_visible_specs.clone()
+    }
+
+    pub(crate) fn specs(&self) -> Vec<ToolSpec> {
+        self.registry.specs()
+    }
+
+    pub(crate) fn find_spec(&self, tool_name: &ToolName) -> Option<ToolSpec> {
+        self.registry.find_spec(tool_name)
     }
 
     #[cfg(test)]
@@ -226,6 +235,17 @@ impl ToolRouter {
 
         // Keep the legacy ToolInvocation.turn field tied to the same request state until handlers migrate.
         let turn = Arc::clone(&step_context.turn);
+        let direct_js_repl_call = tool_name.namespace.is_none()
+            && matches!(tool_name.name.as_str(), "js_repl" | "js_repl_reset");
+        if matches!(&source, ToolCallSource::Direct)
+            && turn.config.features.enabled(Feature::JsReplToolsOnly)
+            && !direct_js_repl_call
+        {
+            return Err(FunctionCallError::RespondToModel(
+                "direct tool calls are disabled; use js_repl and codex.tool(...) instead"
+                    .to_string(),
+            ));
+        }
         let invocation = ToolInvocation {
             session,
             turn,

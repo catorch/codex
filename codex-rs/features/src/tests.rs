@@ -334,12 +334,15 @@ fn image_detail_original_is_a_removed_feature_key() {
 }
 
 #[test]
-fn js_repl_features_are_removed_feature_keys() {
-    assert_eq!(Feature::JsRepl.stage(), Stage::Removed);
+fn js_repl_features_are_available_but_disabled_by_default() {
+    assert!(matches!(
+        Feature::JsRepl.stage(),
+        Stage::Experimental { .. }
+    ));
     assert_eq!(Feature::JsRepl.default_enabled(), false);
     assert_eq!(feature_for_key("js_repl"), Some(Feature::JsRepl));
 
-    assert_eq!(Feature::JsReplToolsOnly.stage(), Stage::Removed);
+    assert_eq!(Feature::JsReplToolsOnly.stage(), Stage::UnderDevelopment);
     assert_eq!(Feature::JsReplToolsOnly.default_enabled(), false);
     assert_eq!(
         feature_for_key("js_repl_tools_only"),
@@ -548,7 +551,7 @@ fn from_sources_ignores_removed_undo_feature_key() {
 }
 
 #[test]
-fn from_sources_ignores_removed_js_repl_feature_keys() {
+fn from_sources_applies_js_repl_feature_keys() {
     let features_toml = FeaturesToml::from(BTreeMap::from([
         ("js_repl".to_string(), true),
         ("js_repl_tools_only".to_string(), true),
@@ -563,7 +566,26 @@ fn from_sources_ignores_removed_js_repl_feature_keys() {
         FeatureOverrides::default(),
     );
 
-    assert_eq!(features, Features::with_defaults());
+    assert!(features.enabled(Feature::JsRepl));
+    assert!(features.enabled(Feature::JsReplToolsOnly));
+}
+
+#[test]
+fn js_repl_tools_only_requires_js_repl() {
+    let features_toml =
+        FeaturesToml::from(BTreeMap::from([("js_repl_tools_only".to_string(), true)]));
+
+    let features = Features::from_sources(
+        FeatureConfigSource {
+            features: Some(&features_toml),
+            ..Default::default()
+        },
+        FeatureConfigSource::default(),
+        FeatureOverrides::default(),
+    );
+
+    assert!(!features.enabled(Feature::JsRepl));
+    assert!(!features.enabled(Feature::JsReplToolsOnly));
 }
 
 #[test]
