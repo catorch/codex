@@ -61,6 +61,104 @@ In the codex-rs folder where the rust code lives:
     trivial; prefer new modules/files and keep `chatwidget.rs` focused on orchestration.
 - When running Rust commands (e.g. `just fix` or `just test`) be patient with the command and never try to kill them using the PID. Rust lock can make the execution slow, this is expected.
 
+## Maintaining This Fork's Restored `js_repl`
+
+This fork intentionally restores the `js_repl` feature that upstream removed in PR #19410 ("Remove js_repl feature", merged April 25, 2026). The goal is not "latest main plus whatever happens to build"; the goal is:
+
+> latest stable Codex release tag + restored `js_repl`
+
+Prefer stable release tags over `upstream/main` unless the user explicitly asks for main. Main can contain transient compile breaks or unreleased migrations that distract from the actual goal.
+
+Current known-good branch:
+
+- Branch: `restore-js-repl-rust-v0.144.1`
+- Base tag: `rust-v0.144.1`
+- Restore commit: `1f950a70ab Restore js_repl support`
+- Fork remote: `origin = https://github.com/catorch/codex.git`
+- Official remote: `upstream = https://github.com/openai/codex.git`
+- Upstream push URL should stay disabled: `git remote set-url --push upstream DISABLE`
+
+When updating this fork for a newer stable release:
+
+1. Find the latest non-prerelease Codex release.
+
+   ```bash
+   gh release list --repo openai/codex --limit 20
+   git fetch upstream --tags
+   ```
+
+2. Create one branch per stable release tag.
+
+   ```bash
+   git switch -c restore-js-repl-rust-vX.Y.Z rust-vX.Y.Z
+   ```
+
+3. Replay the previous stable restore commit, then resolve conflicts conservatively.
+
+   ```bash
+   git cherry-pick 1f950a70ab
+   ```
+
+   If this is not the immediately previous restore commit anymore, cherry-pick the latest `Restore js_repl support` commit from the most recent working `restore-js-repl-rust-*` branch.
+
+4. Preserve release-tag behavior unless the conflict is directly about `js_repl`.
+
+   Examples:
+   - Keep the release tag's Rust toolchain pin.
+   - Keep the release tag's zsh/install-context behavior.
+   - Add only the Node/js_repl-specific CI setup, config fields, feature flags, tool registration, and tests needed for the restore.
+
+5. Avoid committing generated metadata churn. Running Cargo on a release tag may rewrite many workspace package versions in `codex-rs/Cargo.lock` from `0.0.0` to the release version. If no dependency changed, discard that:
+
+   ```bash
+   git restore codex-rs/Cargo.lock
+   ```
+
+6. Validate the stable restore.
+
+   ```bash
+   cd codex-rs
+   just fmt
+   cargo check -p codex-core
+   cargo check -p codex-exec
+   just test -p codex-core --lib js_repl
+   just test -p codex-features --lib js_repl
+   cargo run -q -p codex-cli -- --version
+   cargo run -q -p codex-cli -- features list
+   ```
+
+   The feature list must include:
+
+   ```text
+   js_repl             experimental       true
+   js_repl_tools_only  under development  false
+   ```
+
+7. Run at least one actual CLI smoke test.
+
+   ```bash
+   ./target/debug/codex exec --enable js_repl --json --skip-git-repo-check \
+     "Use the js_repl tool to evaluate 1 + 1. Then answer exactly: result=2"
+   ```
+
+   Expected evidence: JSON events show a `js_repl` command execution and the final agent message is `result=2`.
+
+8. If verifying `playwright-interactive`, remember that the skill requires `js_repl` and a local Playwright install visible from the REPL's cwd. A temporary install is acceptable for smoke testing:
+
+   ```bash
+   npm install --prefix /tmp/codex-playwright-node --cache /tmp/codex-npm-cache playwright
+   ```
+
+   In the REPL, import Playwright from `/tmp/codex-playwright-node/node_modules/playwright`, open the target URL, and save a screenshot under `/tmp`. A known-good smoke result on this branch loaded `http://localhost:3000`, reported title `BrickCanvas`, and wrote `/tmp/codex-localhost-3000.png`.
+
+9. Push only to the fork.
+
+   ```bash
+   git push -u origin restore-js-repl-rust-vX.Y.Z
+   ```
+
+Do not force-push over older stable restore branches unless the user asks. Keeping old release branches makes it easy to bisect, compare ports, or fall back to a known-good Codex release.
+
 Run `just fmt` (in the `codex-rs` directory) automatically after you have finished making code changes anywhere in this repository; do not ask for approval to run it. Additionally, run the tests:
 
 1. Do not run `cargo test` directly. Use `just test` so test execution follows the repo defaults.
