@@ -43,11 +43,9 @@ pub struct ConfigProfile {
     pub chatgpt_base_url: Option<String>,
     /// Optional path to a file containing model instructions.
     pub model_instructions_file: Option<AbsolutePathBuf>,
-    /// Deprecated: ignored.
-    #[schemars(skip)]
+    /// Optional absolute path to the Node runtime used by `js_repl`.
     pub js_repl_node_path: Option<AbsolutePathBuf>,
-    /// Deprecated: ignored.
-    #[schemars(skip)]
+    /// Ordered list of directories to search for Node modules in `js_repl`.
     pub js_repl_node_module_dirs: Option<Vec<AbsolutePathBuf>>,
     pub experimental_compact_prompt_file: Option<AbsolutePathBuf>,
     pub include_permissions_instructions: Option<bool>,

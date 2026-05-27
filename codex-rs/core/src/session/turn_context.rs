@@ -7,6 +7,7 @@ use crate::environment_selection::EnvironmentConfigOrigin;
 use crate::environment_selection::TurnEnvironmentSnapshot;
 use crate::exec_policy::AllowPrefixRules;
 use crate::shell_snapshot::ShellSnapshotFile;
+use crate::tools::js_repl::JsReplHandle;
 use crate::tools::sandboxing::executor_windows_sandbox_level;
 use arc_swap::ArcSwap;
 use codex_core_plugins::PluginCommandAttribution;
@@ -233,6 +234,7 @@ pub struct TurnContext {
     pub(crate) windows_sandbox_level: WindowsSandboxLevel,
     pub(crate) available_models: Vec<ModelPreset>,
     pub(crate) unified_exec_shell_mode: UnifiedExecShellMode,
+    pub(crate) js_repl: Arc<JsReplHandle>,
     pub(crate) final_output_json_schema: Option<Value>,
     pub(crate) dynamic_tools: Vec<DynamicToolSpec>,
     pub(crate) turn_metadata_state: Arc<TurnMetadataState>,
@@ -537,6 +539,7 @@ impl TurnContext {
             windows_sandbox_level: self.windows_sandbox_level,
             available_models,
             unified_exec_shell_mode: self.unified_exec_shell_mode.clone(),
+            js_repl: Arc::clone(&self.js_repl),
             final_output_json_schema: self.final_output_json_schema.clone(),
             dynamic_tools: self.dynamic_tools.clone(),
             turn_metadata_state: self.turn_metadata_state.clone(),
@@ -760,6 +763,10 @@ impl Session {
             per_turn_config.approvals_reviewer,
         );
         let per_turn_config = Arc::new(per_turn_config);
+        let js_repl = Arc::new(JsReplHandle::with_node_path(
+            per_turn_config.js_repl_node_path.clone(),
+            per_turn_config.js_repl_node_module_dirs.clone(),
+        ));
         let turn_metadata_state = Arc::new(TurnMetadataState::new(
             session_id.to_string(),
             thread_id.to_string(),
@@ -809,6 +816,7 @@ impl Session {
             windows_sandbox_level: session_configuration.windows_sandbox_level,
             available_models,
             unified_exec_shell_mode,
+            js_repl,
             final_output_json_schema: None,
             dynamic_tools: session_configuration.dynamic_tools.clone(),
             turn_metadata_state,

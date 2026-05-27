@@ -91,6 +91,8 @@ mod injected_models_cache;
 #[cfg(not(target_os = "windows"))]
 mod interrupt_hooks;
 mod items;
+mod js_repl;
+mod js_repl_routing;
 mod json_result;
 mod live_cli;
 mod mcp_auth_elicitation;

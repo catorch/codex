@@ -45,6 +45,7 @@ pub type SharedTurnDiffTracker = Arc<Mutex<TurnDiffTracker>>;
 pub enum ToolCallSource {
     Direct,
     DirectPlaintextMessage,
+    JsRepl,
     CodeMode {
         /// Runtime cell that issued the nested tool request.
         cell_id: String,

@@ -7,6 +7,7 @@ mod executed_tool_calls;
 pub(crate) mod handlers;
 pub(crate) mod hook_names;
 pub(crate) mod hosted_spec;
+pub(crate) mod js_repl;
 pub(crate) mod lifecycle;
 pub(crate) mod network_approval;
 pub(crate) mod orchestrator;

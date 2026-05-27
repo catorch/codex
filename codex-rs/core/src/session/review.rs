@@ -160,6 +160,7 @@ pub(super) async fn spawn_review_thread(
         environments: parent_turn_context.environments.clone(),
         available_models,
         unified_exec_shell_mode,
+        js_repl: Arc::clone(&parent_turn_context.js_repl),
         current_date: parent_turn_context.current_date.clone(),
         timezone: parent_turn_context.timezone.clone(),
         app_server_client_name: parent_turn_context.app_server_client_name.clone(),

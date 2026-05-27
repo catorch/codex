@@ -302,3 +302,7 @@ fn experimental_popup_hint_line(keymap: &ListKeymap) -> Line<'static> {
     }
     Line::from(spans)
 }
+
+#[cfg(test)]
+#[path = "experimental_features_view_tests.rs"]
+mod tests;

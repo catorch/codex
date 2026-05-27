@@ -40,7 +40,9 @@ impl Drop for ControlToolCallGuard<'_> {
                 call_id: invocation.call_id.clone(),
                 cell_id: match &invocation.source {
                     ToolCallSource::CodeMode { cell_id, .. } => Some(cell_id.clone()),
-                    ToolCallSource::Direct | ToolCallSource::DirectPlaintextMessage => None,
+                    ToolCallSource::Direct
+                    | ToolCallSource::DirectPlaintextMessage
+                    | ToolCallSource::JsRepl => None,
                 },
                 tool_name: match invocation.tool_name.namespace.as_deref() {
                     Some(namespace) if !invocation.tool_name.is_default_namespace() => {

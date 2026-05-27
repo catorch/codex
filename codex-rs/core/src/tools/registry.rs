@@ -462,6 +462,17 @@ impl ToolRegistry {
             .map(|tool| Arc::clone(&tool.runtime))
     }
 
+    pub(crate) fn specs(&self) -> Vec<ToolSpec> {
+        self.tools
+            .values()
+            .map(|tool| tool.runtime.spec())
+            .collect()
+    }
+
+    pub(crate) fn find_spec(&self, name: &ToolName) -> Option<ToolSpec> {
+        self.tool(name).map(|tool| tool.spec())
+    }
+
     #[cfg(test)]
     pub(crate) fn tool_names_for_test(&self) -> Vec<ToolName> {
         let mut names = self.tools.keys().cloned().collect::<Vec<_>>();

@@ -1,0 +1,71 @@
+---
+source: tui/src/bottom_pane/experimental_features_view_tests.rs
+expression: "frames.join(\"\\n\\n\")"
+---
+width 80, disabled:
+
+  Experimental features
+  Toggle experimental features. Changes are saved to config.toml.
+
+› [ ] JavaScript REPL  Enable a persistent Node-backed JavaScript REPL for
+                       interactive website debugging and other inline
+                       JavaScript execution capabilities. Requires Node >=
+                       v22.22.0 installed.
+
+  Press space to select or enter to save for next conversation
+
+width 80, enabled:
+
+  Experimental features
+  Toggle experimental features. Changes are saved to config.toml.
+
+› [x] JavaScript REPL  Enable a persistent Node-backed JavaScript REPL for
+                       interactive website debugging and other inline
+                       JavaScript execution capabilities. Requires Node >=
+                       v22.22.0 installed.
+
+  Press space to select or enter to save for next conversation
+
+width 40, disabled:
+
+  Experimental features
+  Toggle experimental features. Change
+
+› [ ] JavaScript REPL  Enable a
+                       persistent
+                       Node-backed
+                       JavaScript REPL
+                       for interactive
+                       website
+                       debugging and
+                       other inline
+                       JavaScript
+                       execution
+                       capabilities.
+                       Requires Node
+                       >= v22.22.0
+                       installed.
+
+  Press space to select or enter to save
+
+width 40, enabled:
+
+  Experimental features
+  Toggle experimental features. Change
+
+› [x] JavaScript REPL  Enable a
+                       persistent
+                       Node-backed
+                       JavaScript REPL
+                       for interactive
+                       website
+                       debugging and
+                       other inline
+                       JavaScript
+                       execution
+                       capabilities.
+                       Requires Node
+                       >= v22.22.0
+                       installed.
+
+  Press space to select or enter to save

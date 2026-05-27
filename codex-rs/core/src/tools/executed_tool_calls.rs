@@ -147,7 +147,9 @@ impl ExecutedToolCallRecorder {
             ExecutedToolCall::new(name, arguments)
         };
         match source {
-            ToolCallSource::Direct | ToolCallSource::DirectPlaintextMessage => {
+            ToolCallSource::Direct
+            | ToolCallSource::DirectPlaintextMessage
+            | ToolCallSource::JsRepl => {
                 let mut state = self
                     .state
                     .lock()
@@ -243,9 +245,9 @@ impl ExecutedToolCallRecorder {
             .lock()
             .unwrap_or_else(std::sync::PoisonError::into_inner);
         let call = match source {
-            ToolCallSource::Direct | ToolCallSource::DirectPlaintextMessage => {
-                state.direct_calls.get_mut(call_id)
-            }
+            ToolCallSource::Direct
+            | ToolCallSource::DirectPlaintextMessage
+            | ToolCallSource::JsRepl => state.direct_calls.get_mut(call_id),
             ToolCallSource::CodeMode { cell_id, .. } => state
                 .cells
                 .get_mut(&CellId::new(cell_id.clone()))

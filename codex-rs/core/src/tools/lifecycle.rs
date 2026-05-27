@@ -132,6 +132,7 @@ pub(crate) fn extension_tool_call_source(source: ToolCallSource) -> ExtensionToo
         ToolCallSource::Direct | ToolCallSource::DirectPlaintextMessage => {
             ExtensionToolCallSource::Direct
         }
+        ToolCallSource::JsRepl => ExtensionToolCallSource::Direct,
         ToolCallSource::CodeMode {
             cell_id,
             runtime_tool_call_id,

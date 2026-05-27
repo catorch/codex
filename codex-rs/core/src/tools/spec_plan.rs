@@ -15,6 +15,8 @@ use crate::tools::handlers::DynamicToolHandler;
 use crate::tools::handlers::ExecCommandHandler;
 use crate::tools::handlers::ExecCommandHandlerOptions;
 use crate::tools::handlers::GetContextRemainingHandler;
+use crate::tools::handlers::JsReplHandler;
+use crate::tools::handlers::JsReplResetHandler;
 use crate::tools::handlers::ListAvailablePluginsToInstallHandler;
 use crate::tools::handlers::ListMcpResourceTemplatesHandler;
 use crate::tools::handlers::ListMcpResourcesHandler;
@@ -1135,6 +1137,11 @@ fn add_core_utility_tools(context: &CoreToolPlanContext<'_>, registry: &mut Tool
 
     if turn_context.config.update_plan_enabled {
         registry.add(PlanHandler);
+    }
+
+    if environment_mode.has_environment() && features.enabled(Feature::JsRepl) {
+        registry.add(JsReplHandler);
+        registry.add(JsReplResetHandler);
     }
 
     if features.enabled(Feature::DeferredExecutor) {
