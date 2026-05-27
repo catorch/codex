@@ -4,7 +4,10 @@ use super::TABLE_BODY_SEPARATOR_CHAR;
 use super::TableCell;
 use super::TableColumnKind;
 use super::TableColumnMetrics;
-use crate::render::line_utils::push_owned_lines;
+use crate::render::line_utils::line_to_static;
+use crate::terminal_hyperlinks::HyperlinkLine;
+use crate::terminal_hyperlinks::prefix_hyperlink_lines;
+use crate::terminal_hyperlinks::remap_wrapped_line;
 use crate::wrapping::RtOptions;
 use crate::wrapping::word_wrap_line;
 use ratatui::style::Style;
@@ -99,7 +102,7 @@ pub(super) fn render_records(
     available_width: Option<usize>,
     label_style: Style,
     separator_style: Style,
-) -> Vec<Line<'static>> {
+) -> Vec<HyperlinkLine> {
     let label_width = headers
         .iter()
         .map(|header| header.plain_text().width())
@@ -135,10 +138,10 @@ pub(super) fn render_records(
         }
         if row_index + 1 < rows.len() {
             let width = available_width.unwrap_or_else(|| widest_line_width(&out));
-            out.push(Line::from(Span::styled(
+            out.push(HyperlinkLine::new(Line::from(Span::styled(
                 TABLE_BODY_SEPARATOR_CHAR.to_string().repeat(width),
                 separator_style,
-            )));
+            ))));
         }
     }
 
@@ -146,7 +149,7 @@ pub(super) fn render_records(
 }
 
 fn render_aligned_field(
-    out: &mut Vec<Line<'static>>,
+    out: &mut Vec<HyperlinkLine>,
     header: &TableCell,
     value: &TableCell,
     label_width: usize,
@@ -158,25 +161,25 @@ fn render_aligned_field(
         .map(|width| width.saturating_sub(value_indent).max(MIN_VALUE_WIDTH))
         .unwrap_or_else(|| cell_width(value).max(MIN_VALUE_WIDTH));
     let wrapped_value = wrap_cell(value, value_width);
-    for (line_index, value_line) in wrapped_value.into_iter().enumerate() {
-        let mut spans = Vec::new();
-        if line_index == 0 {
-            let label = header.plain_text();
-            spans.push(Span::raw(" ".repeat(FIELD_LEADING_PADDING)));
-            spans.push(Span::styled(label.clone(), label_style));
-            spans.push(Span::raw(
-                " ".repeat(label_width.saturating_sub(label.width()) + FIELD_GAP),
-            ));
-        } else {
-            spans.push(Span::raw(" ".repeat(value_indent)));
-        }
-        spans.extend(value_line.spans);
-        out.push(Line::from(spans));
-    }
+    let label = header.plain_text();
+    let first_prefix = Span::styled(
+        format!(
+            "{}{label}{}",
+            " ".repeat(FIELD_LEADING_PADDING),
+            " ".repeat(label_width.saturating_sub(label.width()) + FIELD_GAP)
+        ),
+        label_style,
+    );
+    let subsequent_prefix = Span::raw(" ".repeat(value_indent));
+    out.extend(prefix_hyperlink_lines(
+        wrapped_value,
+        first_prefix,
+        subsequent_prefix,
+    ));
 }
 
 fn render_stacked_field(
-    out: &mut Vec<Line<'static>>,
+    out: &mut Vec<HyperlinkLine>,
     header: &TableCell,
     value: &TableCell,
     available_width: Option<usize>,
@@ -186,43 +189,45 @@ fn render_stacked_field(
         .map(|width| width.saturating_sub(FIELD_LEADING_PADDING).max(1))
         .unwrap_or_else(|| header.plain_text().width().max(1));
     let label = Line::from(Span::styled(header.plain_text(), label_style));
-    let mut wrapped_labels = Vec::new();
-    push_owned_lines(
-        &word_wrap_line(&label, RtOptions::new(label_width)),
-        &mut wrapped_labels,
-    );
-    for label_line in wrapped_labels {
-        let mut spans = vec![Span::raw(" ".repeat(FIELD_LEADING_PADDING))];
-        spans.extend(label_line.spans);
-        out.push(Line::from(spans));
-    }
+    let wrapped_labels = word_wrap_line(&label, RtOptions::new(label_width))
+        .into_iter()
+        .map(|line| HyperlinkLine::new(line_to_static(&line)))
+        .collect();
+    out.extend(prefix_hyperlink_lines(
+        wrapped_labels,
+        Span::raw(" ".repeat(FIELD_LEADING_PADDING)),
+        Span::raw(" ".repeat(FIELD_LEADING_PADDING)),
+    ));
 
     let value_width = available_width
         .map(|width| width.saturating_sub(STACKED_VALUE_INDENT).max(1))
         .unwrap_or_else(|| cell_width(value).max(1));
-    for value_line in wrap_cell(value, value_width) {
-        let mut spans = vec![Span::raw(" ".repeat(STACKED_VALUE_INDENT))];
-        spans.extend(value_line.spans);
-        out.push(Line::from(spans));
-    }
+    out.extend(prefix_hyperlink_lines(
+        wrap_cell(value, value_width),
+        Span::raw(" ".repeat(STACKED_VALUE_INDENT)),
+        Span::raw(" ".repeat(STACKED_VALUE_INDENT)),
+    ));
 }
 
-fn wrap_cell(cell: &TableCell, width: usize) -> Vec<Line<'static>> {
+fn wrap_cell(cell: &TableCell, width: usize) -> Vec<HyperlinkLine> {
     if cell.lines.is_empty() {
-        return vec![Line::default()];
+        return vec![HyperlinkLine::new(Line::default())];
     }
 
     let mut wrapped = Vec::new();
     for source_line in &cell.lines {
-        let rendered = word_wrap_line(source_line, RtOptions::new(width.max(1)));
+        let rendered = word_wrap_line(&source_line.line, RtOptions::new(width.max(/*other*/ 1)))
+            .into_iter()
+            .map(|line| line_to_static(&line))
+            .collect::<Vec<_>>();
         if rendered.is_empty() {
-            wrapped.push(Line::default());
+            wrapped.push(HyperlinkLine::new(Line::default()));
         } else {
-            push_owned_lines(&rendered, &mut wrapped);
+            wrapped.extend(remap_wrapped_line(source_line, rendered));
         }
     }
     if wrapped.is_empty() {
-        wrapped.push(Line::default());
+        wrapped.push(HyperlinkLine::new(Line::default()));
     }
     wrapped
 }
@@ -230,25 +235,11 @@ fn wrap_cell(cell: &TableCell, width: usize) -> Vec<Line<'static>> {
 fn cell_width(cell: &TableCell) -> usize {
     cell.lines
         .iter()
-        .map(|line| {
-            line.spans
-                .iter()
-                .map(|span| span.content.width())
-                .sum::<usize>()
-        })
+        .map(HyperlinkLine::width)
         .max()
         .unwrap_or(0)
 }
 
-fn widest_line_width(lines: &[Line<'_>]) -> usize {
-    lines
-        .iter()
-        .map(|line| {
-            line.spans
-                .iter()
-                .map(|span| span.content.width())
-                .sum::<usize>()
-        })
-        .max()
-        .unwrap_or(0)
+fn widest_line_width(lines: &[HyperlinkLine]) -> usize {
+    lines.iter().map(HyperlinkLine::width).max().unwrap_or(0)
 }
