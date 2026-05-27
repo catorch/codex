@@ -2,6 +2,7 @@ use super::*;
 use crate::SkillLoadOutcome;
 use crate::config::GhostSnapshotConfig;
 use crate::environment_selection::ResolvedTurnEnvironments;
+use crate::tools::js_repl::JsReplHandle;
 use codex_model_provider::SharedModelProvider;
 use codex_model_provider::create_model_provider;
 use codex_protocol::SessionId;
@@ -85,6 +86,7 @@ pub struct TurnContext {
     pub(crate) goal_tools_supported: bool,
     pub features: ManagedFeatures,
     pub(crate) ghost_snapshot: GhostSnapshotConfig,
+    pub(crate) js_repl: Arc<JsReplHandle>,
     pub(crate) final_output_json_schema: Option<Value>,
     pub(crate) codex_self_exe: Option<PathBuf>,
     pub(crate) codex_linux_sandbox_exe: Option<PathBuf>,
@@ -242,6 +244,7 @@ impl TurnContext {
             goal_tools_supported: self.goal_tools_supported,
             features,
             ghost_snapshot: self.ghost_snapshot.clone(),
+            js_repl: Arc::clone(&self.js_repl),
             final_output_json_schema: self.final_output_json_schema.clone(),
             codex_self_exe: self.codex_self_exe.clone(),
             codex_linux_sandbox_exe: self.codex_linux_sandbox_exe.clone(),
@@ -525,6 +528,10 @@ impl Session {
             goal_tools_supported,
             features: per_turn_config.features.clone(),
             ghost_snapshot: per_turn_config.ghost_snapshot.clone(),
+            js_repl: Arc::new(JsReplHandle::with_node_path(
+                per_turn_config.js_repl_node_path.clone(),
+                per_turn_config.js_repl_node_module_dirs.clone(),
+            )),
             final_output_json_schema: None,
             codex_self_exe: per_turn_config.codex_self_exe.clone(),
             codex_linux_sandbox_exe: per_turn_config.codex_linux_sandbox_exe.clone(),

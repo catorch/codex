@@ -103,6 +103,7 @@ pub(super) async fn spawn_review_thread(
         goal_tools_supported,
         features: review_features,
         ghost_snapshot: parent_turn_context.ghost_snapshot.clone(),
+        js_repl: Arc::clone(&parent_turn_context.js_repl),
         current_date: parent_turn_context.current_date.clone(),
         timezone: parent_turn_context.timezone.clone(),
         app_server_client_name: parent_turn_context.app_server_client_name.clone(),

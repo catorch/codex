@@ -857,6 +857,12 @@ pub struct Config {
     /// code via [`ConfigOverrides`].
     pub main_execve_wrapper_exe: Option<PathBuf>,
 
+    /// Optional absolute path to the Node runtime used by `js_repl`.
+    pub js_repl_node_path: Option<PathBuf>,
+
+    /// Ordered list of directories to search for Node modules in `js_repl`.
+    pub js_repl_node_module_dirs: Vec<PathBuf>,
+
     /// Optional absolute path to patched zsh used by zsh-exec-bridge-backed shell execution.
     pub zsh_path: Option<PathBuf>,
 
@@ -3199,6 +3205,11 @@ impl Config {
         )
         .await?;
         let compact_prompt = compact_prompt.or(file_compact_prompt);
+        let js_repl_node_path = cfg.js_repl_node_path.map(Into::into);
+        let js_repl_node_module_dirs = cfg
+            .js_repl_node_module_dirs
+            .map(|dirs| dirs.into_iter().map(Into::into).collect::<Vec<PathBuf>>())
+            .unwrap_or_default();
         let zsh_path = zsh_path_override.or(cfg.zsh_path.map(Into::into));
 
         let review_model = override_review_model.or(cfg.review_model);
@@ -3442,6 +3453,8 @@ impl Config {
             codex_self_exe,
             codex_linux_sandbox_exe,
             main_execve_wrapper_exe,
+            js_repl_node_path,
+            js_repl_node_module_dirs,
             zsh_path,
 
             hide_agent_reasoning: cfg.hide_agent_reasoning.unwrap_or(false),
