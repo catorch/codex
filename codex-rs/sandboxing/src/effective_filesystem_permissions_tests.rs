@@ -119,6 +119,30 @@ fn effective_workspace_permissions_bind_remaining_symbolic_root_to_profile_cwd()
 }
 
 #[test]
+fn effective_workspace_permissions_identify_missing_protected_metadata_carveouts() {
+    let temp_dir = TempDir::new().expect("temp dir");
+    let cwd = absolute_path(temp_dir.path());
+    let effective = derive_effective(&PermissionProfile::workspace_write(), &cwd);
+
+    assert_eq!(
+        effective.is_missing_protected_metadata_carveout(cwd.join(".git").as_path()),
+        true
+    );
+    assert_eq!(
+        effective.is_missing_protected_metadata_carveout(cwd.join(".agents").as_path()),
+        true
+    );
+    assert_eq!(
+        effective.is_missing_protected_metadata_carveout(cwd.join(".codex").as_path()),
+        true
+    );
+    assert_eq!(
+        effective.is_missing_protected_metadata_carveout(cwd.join("src").as_path()),
+        false
+    );
+}
+
+#[test]
 fn effective_workspace_permissions_preserve_materialized_workspace_roots() {
     let temp_dir = TempDir::new().expect("temp dir");
     let cwd = absolute_path(temp_dir.path());

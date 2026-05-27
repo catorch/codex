@@ -1,7 +1,11 @@
 use codex_protocol::models::PermissionProfile;
+use codex_protocol::permissions::FileSystemAccessMode;
+use codex_protocol::permissions::FileSystemPath;
 use codex_protocol::permissions::FileSystemSandboxKind;
 use codex_protocol::permissions::FileSystemSandboxPolicy;
+use codex_protocol::permissions::FileSystemSpecialPath;
 use codex_protocol::permissions::ReadDenyMatcher;
+use codex_protocol::permissions::is_protected_metadata_name;
 use codex_protocol::protocol::WritableRoot;
 use codex_utils_absolute_path::AbsolutePathBuf;
 use std::fmt;
@@ -45,6 +49,7 @@ pub struct EffectiveFilesystemPermissions {
     pub include_platform_defaults: bool,
     pub glob_scan_max_depth: Option<usize>,
     file_system_policy: FileSystemSandboxPolicy,
+    missing_protected_metadata_carveouts: Vec<AbsolutePathBuf>,
     permission_profile_cwd: AbsolutePathBuf,
     read_deny_matcher: Option<ReadDenyMatcher>,
 }
@@ -74,8 +79,32 @@ impl EffectiveFilesystemPermissions {
         permission_profile: &PermissionProfile,
         context: FilesystemPermissionsContext<'_>,
     ) -> Result<Self, FilesystemPermissionsError> {
-        let file_system_policy = permission_profile
-            .file_system_sandbox_policy()
+        let source_file_system_policy = permission_profile.file_system_sandbox_policy();
+        let missing_protected_metadata_carveouts = source_file_system_policy
+            .entries
+            .iter()
+            .filter(|entry| entry.access == FileSystemAccessMode::Read)
+            .filter_map(|entry| {
+                let FileSystemPath::Special {
+                    value:
+                        FileSystemSpecialPath::ProjectRoots {
+                            subpath: Some(subpath),
+                        },
+                } = &entry.path
+                else {
+                    return None;
+                };
+                if !is_protected_metadata_name(subpath.as_os_str()) {
+                    return None;
+                }
+                let path = AbsolutePathBuf::resolve_path_against_base(
+                    subpath,
+                    context.permission_profile_cwd.as_path(),
+                );
+                (!path.as_path().exists()).then_some(path)
+            })
+            .collect();
+        let file_system_policy = source_file_system_policy
             .materialize_project_roots_with_cwd(context.permission_profile_cwd.as_path());
         // Direct enforcement queries have historically failed closed for malformed
         // deny patterns. Platform lowering that expands concrete targets can still
@@ -112,6 +141,7 @@ impl EffectiveFilesystemPermissions {
             include_platform_defaults,
             glob_scan_max_depth,
             file_system_policy,
+            missing_protected_metadata_carveouts,
             permission_profile_cwd: context.permission_profile_cwd.clone(),
             read_deny_matcher,
         })
@@ -143,6 +173,14 @@ impl EffectiveFilesystemPermissions {
 
     pub fn has_full_disk_write_access(&self) -> bool {
         self.file_system_policy.has_full_disk_write_access()
+    }
+
+    /// Returns whether `path` is a missing automatic metadata carveout that a
+    /// platform lowerer must enforce without materializing it as a readable path.
+    pub fn is_missing_protected_metadata_carveout(&self, path: &Path) -> bool {
+        self.missing_protected_metadata_carveouts
+            .iter()
+            .any(|carveout| carveout.as_path() == path)
     }
 }
 
