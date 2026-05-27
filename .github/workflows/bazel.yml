@@ -95,6 +95,7 @@ jobs:
           bazel_wrapper_args=(
             --print-failed-action-summary
             --print-failed-test-logs
+            --use-node-test-env
           )
           bazel_test_args=(
             test
@@ -207,6 +208,7 @@ jobs:
           ./.github/scripts/run-bazel-ci.sh \
             --print-failed-action-summary \
             --print-failed-test-logs \
+            --use-node-test-env \
             --windows-cross-compile \
             --remote-download-toplevel \
             -- \
@@ -292,6 +294,7 @@ jobs:
           ./.github/scripts/run-bazel-ci.sh \
             --print-failed-action-summary \
             --print-failed-test-logs \
+            --use-node-test-env \
             -- \
             "${bazel_test_args[@]}" \
             -- \
