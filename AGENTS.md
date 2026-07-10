@@ -157,6 +157,20 @@ When updating this fork for a newer stable release:
    git push -u origin restore-js-repl-rust-vX.Y.Z
    ```
 
+10. Promote the validated release branch by making it the fork's default branch.
+
+    ```bash
+    gh repo edit catorch/codex \
+      --default-branch restore-js-repl-rust-vX.Y.Z
+    git remote set-head origin -a
+    ```
+
+    Do not merge the versioned restore branch into `main`. Each restore branch is intentionally
+    recreated from a stable release tag with the fork's patch series replayed on top, so a later
+    restore branch will not descend from the previously patched `main`. Changing the default branch
+    keeps clones and GitHub navigation on the latest validated build without accumulating merge
+    commits or rewriting `main`.
+
 Do not force-push over older stable restore branches unless the user asks. Keeping old release branches makes it easy to bisect, compare ports, or fall back to a known-good Codex release.
 
 Run `just fmt` (in the `codex-rs` directory) automatically after you have finished making code changes anywhere in this repository; do not ask for approval to run it. Additionally, run the tests:
