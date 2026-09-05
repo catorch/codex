@@ -71,9 +71,9 @@ Prefer stable release tags over `upstream/main` unless the user explicitly asks 
 
 Current known-good branch:
 
-- Branch: `restore-js-repl-rust-v0.144.1`
-- Base tag: `rust-v0.144.1`
-- Restore commit: `1f950a70ab Restore js_repl support`
+- Branch: `restore-js-repl-rust-v0.153.4`
+- Base tag: `rust-v0.153.4`
+- Restore commit: `b805866a4a Restore js_repl support`
 - Fork remote: `origin = https://github.com/catorch/codex.git`
 - Official remote: `upstream = https://github.com/openai/codex.git`
 - Upstream push URL should stay disabled: `git remote set-url --push upstream DISABLE`
@@ -96,7 +96,7 @@ When updating this fork for a newer stable release:
 3. Replay the previous stable restore commit, then resolve conflicts conservatively.
 
    ```bash
-   git cherry-pick 1f950a70ab
+   git cherry-pick b805866a4a
    ```
 
    If this is not the immediately previous restore commit anymore, cherry-pick the latest `Restore js_repl support` commit from the most recent working `restore-js-repl-rust-*` branch.
@@ -118,14 +118,32 @@ When updating this fork for a newer stable release:
 
    ```bash
    cd codex-rs
-   just fmt
    cargo check -p codex-core
    cargo check -p codex-exec
    just test -p codex-core --lib js_repl
-   just test -p codex-features --lib js_repl
+   cargo build -p codex-rmcp-client --bin test_stdio_server
+   just test -p codex-core --test all js_repl
+   just test -p codex-features -p codex-tools -p codex-config --lib
+   just test -p codex-tui
+   just fix -p codex-core -p codex-tools -p codex-config -p codex-features -p codex-tui
+   just fmt
    cargo run -q -p codex-cli -- --version
-   cargo run -q -p codex-cli -- features list
+   cargo run -q -p codex-cli -- --enable js_repl features list
    ```
+
+   Keep `core/tests/suite/js_repl.rs` and `js_repl_routing.rs` registered in the suite;
+   the original library runtime tests are partly macOS-only. On `rust-v0.153.4`, all
+   23 selected integration tests passed on Linux. The TUI run passed 4,061 tests;
+   28 upstream snapshots differed only in the release version and resulting padding.
+   Inspect those differences rather than accepting unrelated snapshot churn. Unset
+   `NO_COLOR` and use umask `077` when testing terminal colors and IDE socket permissions.
+
+   Newer releases also require `codex-code-mode-host` beside the CLI. Build it with
+   `cargo build -p codex-code-mode-host`, or install the unmodified helper from the
+   exact same official release tag after verifying its release-asset SHA-256 digest.
+   The `v150.4.0` V8 sandbox archive for GNU Linux was unavailable when validating
+   `0.153.4`, so the official Linux musl helper was used. Do not change pinned V8
+   dependencies or disable Code Mode to work around a missing helper.
 
    The feature list must include:
 
@@ -149,7 +167,14 @@ When updating this fork for a newer stable release:
    npm install --prefix /tmp/codex-playwright-node --cache /tmp/codex-npm-cache playwright
    ```
 
-   In the REPL, import Playwright from `/tmp/codex-playwright-node/node_modules/playwright`, open the target URL, and save a screenshot under `/tmp`. A known-good smoke result on this branch loaded `http://localhost:3000`, reported title `BrickCanvas`, and wrote `/tmp/codex-localhost-3000.png`.
+   In the REPL, import Playwright from `/tmp/codex-playwright-node/node_modules/playwright`,
+   open the target URL, and save a screenshot under `/tmp`. Ensure the Chromium revision
+   matching that Playwright installation is installed. The `0.153.4` smoke used a local
+   form fixture, reused browser/context/page handles across separate cells, checked
+   input, touch, reload and timeout recovery, and emitted screenshots at desktop and
+   mobile sizes. A fresh installed session also passed with Code Mode Only enabled,
+   default Chromium launch (no executable override), image emission, and browser cleanup.
+   Local validation evidence is under `/tmp/codex-js-repl-v0.153.4-smoke/`.
 
 9. Push only to the fork.
 
